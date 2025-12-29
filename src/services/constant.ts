@@ -5,6 +5,22 @@ export const ACCESS_TOKEN_EXPIRE_IN_MS =
   1000 * 60 * parseInt(process.env.JWT_EXPIRY as string);
 export const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
+export const JWT_SECRET_MOBILE = new TextEncoder().encode(
+  process.env.JWT_SECRET_Mobile
+);
+export const JWT_SECRET_EMAIL = new TextEncoder().encode(
+  process.env.JWT_SECRET_Email
+);
+export const JWT_OTP_EXPIRY_TIME = parseInt(
+  process.env.JWT_OTP_EXPIRY_TIME as string
+);
+
+export const accountSid = process.env.TWILIO_ACCOUNT_SID;
+export const authToken = process.env.TWILIO_AUTH_TOKEN;
+export const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+
+export const ENCRYPT_TEXT_SECRET_KEY = process.env.AES_SECRET_KEY as string;
+
 export const MYSQL_HOST = process.env.MYSQL_HOST as string;
 export const MYSQL_PORT = parseInt(process.env.MYSQL_PORT ?? "3306");
 export const MYSQL_DATABASE = process.env.MYSQL_DATABASE as string;

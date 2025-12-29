@@ -2,6 +2,7 @@ import PasswordValidator from "password-validator";
 import generatePassword from "omgopass";
 import dumbPasswords from "dumb-passwords";
 import { randomBytes } from "crypto";
+import Joi from "joi";
 
 export function isValidPassword(password: string, email: string): boolean {
   const [username, domain] = email.split("@");
@@ -56,3 +57,31 @@ export function generateRandomString(length: number): string {
 
   return randomString;
 }
+
+
+export const listQuerySchema = Joi.object({
+  page: Joi.number().optional(),
+  limit: Joi.number().optional(),
+  sort: Joi.object<Record<string, "asc" | "desc">>().optional(),
+  populates: Joi.alternatives().try(
+    Joi.array().items(Joi.string().required()).optional(),
+    Joi.string().optional(),
+  ),
+  fields: Joi.object().optional(),
+  filters: Joi.object().optional(),
+  orFilters: Joi.object().optional(),
+  token: Joi.string().optional(),
+  search: Joi.string().optional(),
+  startDate: Joi.date().optional(),
+  endDate: Joi.date().optional(),
+  sectionType:Joi.string().optional(),
+  galleryType:Joi.string().optional(),
+});
+
+export const singleQuerySchema = Joi.object({
+  populates: Joi.alternatives().try(
+    Joi.array().items(Joi.string().required()).optional(),
+    Joi.string().optional(),
+  ),
+  fields: Joi.object().optional(),
+});

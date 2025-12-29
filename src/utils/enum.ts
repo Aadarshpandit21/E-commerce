@@ -11,3 +11,8 @@ export enum UserStatus {
 export enum SessionTokenAction {
   ForgotPassword,
 }
+
+export enum ActionOfDevice {
+  Mobile = "mobile",
+  Email = "email",
+}
