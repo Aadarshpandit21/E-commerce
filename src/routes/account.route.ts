@@ -26,4 +26,6 @@ router
 //   .patch(validator.body(account.updateAccountBodySchema), account.updateAccount)
 //   .get(isAuth, validator.query(singleQuerySchema), account.whoami);
 
+router.post("/accounts/continue-with-google", account.continueWithGoogle);
+
 export default router;

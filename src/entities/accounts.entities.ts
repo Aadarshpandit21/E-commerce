@@ -36,6 +36,9 @@ export class Accounts extends AppCommon {
   @Column({ type: "boolean", default: false })
   isEmailVerified!: boolean;
 
+  @Column({ type: "datetime", nullable: true })
+  lastLoggedIn!: Date;
+
   @OneToMany(() => SessionToken, (token) => token.account, {
     cascade: true,
   })

@@ -36,6 +36,11 @@ export const ENDPOINT = process.env.ENDPOINT ?? "http://localhost:3000";
 export const RateLimiterDuration = parseInt(
   process.env.RateLimiterDuration ?? "500"
 );
+
+export const GOOGLE_CLIENT_IDS = (
+  process.env.GOOGLE_CLIENT_IDS as string
+).split(",");
+
 export const RateLimiterPoints = parseInt(process.env.RateLimiterPoints ?? "5");
 
 export const ERR_MSG = {

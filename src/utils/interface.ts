@@ -7,6 +7,11 @@ import {
   type FindOptionsWhere,
   type FindOptionsOrder,
 } from "typeorm";
+
+export interface OAuthBody {
+  idToken: string;
+}
+
 export interface RefreshTokenPayload extends JWTPayload {
   userId: number;
 }

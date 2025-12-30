@@ -26,16 +26,25 @@ import { sendSMS } from "../services/twillio.service.js";
 import { sendEmail } from "../services/email.service.js";
 import { generateDeviceOtpToken } from "../services/device.token.js";
 import { decryptText, encryptText } from "../services/encrypt.js";
+import { OAuthBody } from "../utils/interface.js";
+import {
+  verifyGoogleIdToken,
+  afterUserVerified,
+} from "../services/account.service.js";
+import { GOOGLE_CLIENT_IDS } from "../services/constant.js";
+
 const sessionTokenRepository = MySQLDataSource.getRepository(SessionToken);
 
 const accountRepository = MySQLDataSource.getRepository(Accounts);
 
-interface SignupInterface {
+export interface SignupInterface {
+  id: number;
   name: string;
   email: string;
   mobile: string;
   password: string;
   role?: Role;
+  lastLoggedIn?: Date;
 }
 
 interface LoginInterface {
@@ -180,8 +189,6 @@ export interface LoginRequestSchema extends ejv.ValidatedRequestSchema {
   [ejv.ContainerTypes.Body]: LoginInterface;
 }
 
-
-
 interface SendOtpRequest {
   action: "mobile" | "email";
   mobile?: number;
@@ -295,9 +302,59 @@ async function resendOTP(
     next(e);
   }
 }
+
+const schema = Joi.object<OAuthBody>({
+  idToken: Joi.string().required(),
+});
+export const continueWithGoogle = async (req: Request, res: Response) => {
+  const { error, value: payload } = schema.validate(req.body);
+
+  if (error || payload === undefined) {
+    return res
+      .status(HttpStatus.BAD_REQUEST)
+      .json({ message: "Invalid request body" });
+  }
+
+  const [err, oAuthUser] = await verifyGoogleIdToken(
+    payload.idToken,
+    GOOGLE_CLIENT_IDS
+  );
+
+  if (err || oAuthUser === undefined) {
+    return res.status(HttpStatus.BAD_REQUEST).json({ message: err?.message });
+  }
+
+  let user = await accountRepository.findOne({
+    where: { email: oAuthUser.email },
+  });
+  if (!user) {
+    user = await accountRepository.create({
+      email: oAuthUser.email,
+      isEmailVerified: true,
+      name: oAuthUser.name,
+    });
+
+    const welcomeHtml = await getHtml("welcome.template");
+    sendEmail(user.email, "Welcome to E-commerce", welcomeHtml).finally();
+  }
+
+  if (!user.isActive) {
+    return res
+      .status(HttpStatus.BAD_REQUEST)
+      .json({ message: "your account is disabled" });
+  }
+
+  // generate accessToken
+  const accessToken = afterUserVerified(user);
+  res
+    .status(HttpStatus.CREATED)
+    .send({ data: { accessToken, user }, message: "login successfully" });
+};
+
 export default {
   signUpAccount,
   signupJoiSchema,
   resendOtpBodySchema,
   resendOTP,
+  continueWithGoogle
 };
