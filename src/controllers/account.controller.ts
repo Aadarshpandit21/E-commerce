@@ -82,7 +82,7 @@ async function signUpAccount(
   next: NextFunction
 ): Promise<void> {
   try {
-    const { name, email, mobile, password, role } = req.body;
+    const { email, mobile, password } = req.body;
 
     const emailExists = await accountRepository.exist({
       where: { email },
@@ -303,6 +303,143 @@ async function resendOTP(
   }
 }
 
+interface VerifyOtpRequest {
+  action: "mobile" | "email";
+  mobile: number;
+  email?: string;
+  otp: number;
+  token: string;
+}
+
+const verifyOtpBodySchema = Joi.object<VerifyOtpRequest>({
+  action: Joi.string()
+    .valid(...Object.values(ActionOfDevice))
+    .required()
+    .trim(),
+  mobile: Joi.number()
+    .optional()
+    .integer()
+    .positive()
+    .min(6000000000)
+    .max(9999999999)
+    .allow(null),
+  email: Joi.string().optional().email().default(null).allow(null),
+  token: Joi.string().required().trim(),
+  otp: Joi.number().integer().positive().required(),
+});
+
+interface VerifyOtpRequestSchema extends ejv.ValidatedRequestSchema {
+  [ejv.ContainerTypes.Body]: VerifyOtpRequest;
+}
+
+async function verifyOTP(
+  req: ejv.ValidatedRequest<VerifyOtpRequestSchema>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { action, mobile, email, otp, token } = req.body;
+    let decryptedOtp: string;
+
+    try {
+      const secret =
+        action === ActionOfDevice.Mobile ? JWT_SECRET_MOBILE : JWT_SECRET_EMAIL;
+
+      const { payload } = await jwtVerify(token, secret);
+      decryptedOtp = decryptText(payload.otp as string);
+    } catch {
+      res.status(HttpStatus.UNAUTHORIZED).json({
+        message: "Invalid OTP or expired OTP",
+      });
+      return;
+    }
+
+    if (Number(decryptedOtp) !== otp) {
+      res.status(HttpStatus.BAD_REQUEST).json({
+        message: "Re-enter the correct OTP",
+      });
+      return;
+    }
+
+    let account: Accounts | null = null;
+
+    if (action === ActionOfDevice.Mobile) {
+      if (!mobile) {
+        res.status(HttpStatus.BAD_REQUEST).json({
+          message: "Mobile number is required",
+        });
+        return;
+      }
+
+      account = await accountRepository.findOne({
+        where: { mobile: mobile.toString() },
+      });
+
+      if (!account) {
+        account = accountRepository.create({
+          mobile: mobile.toString(),
+          isMobileVerified: true,
+          role: Role.USER,
+        });
+      } else {
+        account.isMobileVerified = true;
+      }
+
+      await accountRepository.save(account);
+    }
+
+    if (action === ActionOfDevice.Email) {
+      if (!mobile || !email) {
+        res.status(HttpStatus.BAD_REQUEST).json({
+          message: "Mobile and Email are required",
+        });
+        return;
+      }
+
+      account = await accountRepository.findOne({
+        where: {
+          mobile: mobile.toString(),
+          isMobileVerified: true,
+        },
+      });
+
+      if (!account) {
+        res.status(HttpStatus.NOT_FOUND).json({
+          message: "Please verify mobile number first",
+        });
+        return;
+      }
+
+      const emailUsed = await accountRepository.exists({
+        where: { email },
+      });
+
+      if (emailUsed && account.email !== email) {
+        res.status(HttpStatus.CONFLICT).json({
+          message: ERR_MSG.emailAlreadyExist,
+        });
+        return;
+      }
+
+      account.email = email;
+      account.isEmailVerified = true;
+
+      await accountRepository.save(account);
+    }
+
+    res.status(HttpStatus.OK).json({
+      message: "OTP verified successfully",
+      id: account?.id,
+      mobile: account?.mobile,
+      email: account?.email,
+      mobileVerified: account?.isMobileVerified,
+      emailVerified: account?.isEmailVerified,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 const schema = Joi.object<OAuthBody>({
   idToken: Joi.string().required(),
 });
@@ -356,5 +493,5 @@ export default {
   signupJoiSchema,
   resendOtpBodySchema,
   resendOTP,
-  continueWithGoogle
+  continueWithGoogle,
 };

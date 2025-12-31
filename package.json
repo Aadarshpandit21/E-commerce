@@ -14,6 +14,7 @@
   "type": "module",
   "dependencies": {
     "@types/morgan": "^1.9.10",
+    "apple-signin-auth": "^2.0.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -23,6 +24,7 @@
     "express": "^5.2.1",
     "express-joi-validation": "^6.1.0",
     "express-rate-limit": "^8.2.1",
+    "google-auth-library": "^10.5.0",
     "helmet": "^8.1.0",
     "http-status": "^2.1.0",
     "joi": "^17.13.3",
